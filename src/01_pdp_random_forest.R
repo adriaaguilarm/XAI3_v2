@@ -141,20 +141,21 @@ pdp_summary_2d <- function(pdp_data, dataset_name, feature_x, feature_y) {
 }
 
 theme_pdp <- function() {
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 13) +
     theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 9),
+      axis.title = element_text(color = "#2f2f2f"),
+      axis.text = element_text(color = "#555555"),
+      panel.grid.major = element_line(color = "#e7e7e7", linewidth = 0.7),
       panel.grid.minor = element_blank(),
       legend.position = "right"
     )
 }
 
 theme_pdp_heatmap <- function() {
-  theme_minimal(base_size = 11) +
+  theme_minimal(base_size = 13) +
     theme(
-      plot.title = element_text(face = "bold", size = 13),
-      plot.subtitle = element_text(size = 9),
+      axis.title = element_text(color = "#2f2f2f"),
+      axis.text = element_text(color = "#555555"),
       panel.grid = element_blank(),
       legend.position = "right"
     )
@@ -175,24 +176,20 @@ plot_pdp_1d <- function(
     pdp_data,
     sample_data,
     feature_name,
-    title,
-    subtitle,
     x_label,
     y_label) {
   ggplot(filter(pdp_data, feature == feature_name), aes(value, prediction)) +
-    geom_line(color = "#1f4e79", linewidth = 1) +
+    geom_line(color = "#1f4e79", linewidth = 1.15) +
     geom_rug(
       data = sample_data,
       aes(x = .data[[feature_name]]),
       inherit.aes = FALSE,
       sides = "b",
-      alpha = 0.28,
+      alpha = 0.42,
       color = "#705d48"
     ) +
     scale_y_continuous(labels = label_comma()) +
     labs(
-      title = title,
-      subtitle = subtitle,
       x = x_label,
       y = y_label
     ) +
@@ -332,15 +329,11 @@ write_csv(bike_pdp_temp_hum_2d, "outputs/tables/bike_pdp_temp_hum_2d.csv")
 write_csv(house_pdp_1d, "outputs/tables/house_pdp_1d.csv")
 write_csv(pdp_summary, "outputs/tables/pdp_summary.csv")
 
-bike_pdp_subtitle <- "Random forest trained on all daily records; PDP averaged over exactly 50 sampled observations"
-
 save_pdp_plot(
   plot_pdp_1d(
     bike_pdp_1d,
     bike_pdp_sample,
     "days_since_2011",
-    "Bike rentals PDP: days since 2011",
-    bike_pdp_subtitle,
     "Days since 2011",
     "Predicted daily rentals"
   ),
@@ -352,8 +345,6 @@ save_pdp_plot(
     bike_pdp_1d,
     bike_pdp_sample,
     "temp",
-    "Bike rentals PDP: temperature",
-    "Axis uses the original normalized dataset scale; PDP averaged over exactly 50 sampled observations",
     "Temperature (normalized dataset scale)",
     "Predicted daily rentals"
   ),
@@ -365,8 +356,6 @@ save_pdp_plot(
     bike_pdp_1d,
     bike_pdp_sample,
     "hum",
-    "Bike rentals PDP: humidity",
-    "Axis uses the original normalized dataset scale; PDP averaged over exactly 50 sampled observations",
     "Humidity (normalized dataset scale)",
     "Predicted daily rentals"
   ),
@@ -378,8 +367,6 @@ save_pdp_plot(
     bike_pdp_1d,
     bike_pdp_sample,
     "windspeed",
-    "Bike rentals PDP: wind speed",
-    "Axis uses the original normalized dataset scale; PDP averaged over exactly 50 sampled observations",
     "Wind speed (normalized dataset scale)",
     "Predicted daily rentals"
   ),
@@ -411,8 +398,6 @@ bike_temp_hum_heatmap <- ggplot(
   scale_y_continuous(labels = label_number(accuracy = 0.01)) +
   coord_cartesian(expand = FALSE) +
   labs(
-    title = "Bike rentals PDP: temperature and humidity",
-    subtitle = "Both axes use normalized dataset scales; marginal rugs show the exact 50 PDP observations",
     x = "Temperature (normalized dataset scale)",
     y = "Humidity (normalized dataset scale)"
   ) +
@@ -425,15 +410,11 @@ save_pdp_plot(
   height = 6.5
 )
 
-house_pdp_subtitle <- "Random forest trained and explained on the same 1,500-row sample"
-
 save_pdp_plot(
   plot_pdp_1d(
     house_pdp_1d,
     house_train,
     "bedrooms",
-    "House price PDP: bedrooms",
-    house_pdp_subtitle,
     "Bedrooms",
     "Predicted price"
   ),
@@ -445,8 +426,6 @@ save_pdp_plot(
     house_pdp_1d,
     house_train,
     "bathrooms",
-    "House price PDP: bathrooms",
-    house_pdp_subtitle,
     "Bathrooms",
     "Predicted price"
   ),
@@ -458,8 +437,6 @@ save_pdp_plot(
     house_pdp_1d,
     house_train,
     "sqft_living",
-    "House price PDP: living area",
-    house_pdp_subtitle,
     "Living area (sqft)",
     "Predicted price"
   ),
@@ -471,8 +448,6 @@ save_pdp_plot(
     house_pdp_1d,
     house_train,
     "floors",
-    "House price PDP: floors",
-    house_pdp_subtitle,
     "Floors",
     "Predicted price"
   ),
