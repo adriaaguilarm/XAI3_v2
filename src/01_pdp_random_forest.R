@@ -1,6 +1,8 @@
 library(dplyr)
+library(ggplot2)
 library(ranger)
 library(readr)
+library(scales)
 library(tidyr)
 
 set.seed(20260505)
@@ -138,6 +140,70 @@ pdp_summary_2d <- function(pdp_data, dataset_name, feature_x, feature_y) {
   )
 }
 
+theme_pdp <- function() {
+  theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(size = 9),
+      panel.grid.minor = element_blank(),
+      legend.position = "right"
+    )
+}
+
+theme_pdp_heatmap <- function() {
+  theme_minimal(base_size = 11) +
+    theme(
+      plot.title = element_text(face = "bold", size = 13),
+      plot.subtitle = element_text(size = 9),
+      panel.grid = element_blank(),
+      legend.position = "right"
+    )
+}
+
+save_pdp_plot <- function(plot, filename, width = 9, height = 5.5) {
+  ggsave(
+    file.path("outputs/figures", filename),
+    plot,
+    width = width,
+    height = height,
+    dpi = 300,
+    bg = "white"
+  )
+}
+
+plot_pdp_1d <- function(
+    pdp_data,
+    sample_data,
+    feature_name,
+    title,
+    subtitle,
+    x_label,
+    y_label) {
+  ggplot(filter(pdp_data, feature == feature_name), aes(value, prediction)) +
+    geom_line(color = "#1f4e79", linewidth = 1) +
+    geom_rug(
+      data = sample_data,
+      aes(x = .data[[feature_name]]),
+      inherit.aes = FALSE,
+      sides = "b",
+      alpha = 0.28,
+      color = "#705d48"
+    ) +
+    scale_y_continuous(labels = label_comma()) +
+    labs(
+      title = title,
+      subtitle = subtitle,
+      x = x_label,
+      y = y_label
+    ) +
+    theme_pdp()
+}
+
+tile_step <- function(x) {
+  unique_values <- sort(unique(x))
+  min(diff(unique_values))
+}
+
 bike <- read_csv("day.csv", show_col_types = FALSE) %>%
   mutate(
     dteday = as.Date(dteday),
@@ -265,3 +331,150 @@ write_csv(bike_pdp_1d, "outputs/tables/bike_pdp_1d.csv")
 write_csv(bike_pdp_temp_hum_2d, "outputs/tables/bike_pdp_temp_hum_2d.csv")
 write_csv(house_pdp_1d, "outputs/tables/house_pdp_1d.csv")
 write_csv(pdp_summary, "outputs/tables/pdp_summary.csv")
+
+bike_pdp_subtitle <- "Random forest trained on all daily records; PDP averaged over exactly 50 sampled observations"
+
+save_pdp_plot(
+  plot_pdp_1d(
+    bike_pdp_1d,
+    bike_pdp_sample,
+    "days_since_2011",
+    "Bike rentals PDP: days since 2011",
+    bike_pdp_subtitle,
+    "Days since 2011",
+    "Predicted daily rentals"
+  ),
+  "bike_pdp_days_since_2011.png"
+)
+
+save_pdp_plot(
+  plot_pdp_1d(
+    bike_pdp_1d,
+    bike_pdp_sample,
+    "temp",
+    "Bike rentals PDP: temperature",
+    "Axis uses the original normalized dataset scale; PDP averaged over exactly 50 sampled observations",
+    "Temperature (normalized dataset scale)",
+    "Predicted daily rentals"
+  ),
+  "bike_pdp_temperature.png"
+)
+
+save_pdp_plot(
+  plot_pdp_1d(
+    bike_pdp_1d,
+    bike_pdp_sample,
+    "hum",
+    "Bike rentals PDP: humidity",
+    "Axis uses the original normalized dataset scale; PDP averaged over exactly 50 sampled observations",
+    "Humidity (normalized dataset scale)",
+    "Predicted daily rentals"
+  ),
+  "bike_pdp_humidity.png"
+)
+
+save_pdp_plot(
+  plot_pdp_1d(
+    bike_pdp_1d,
+    bike_pdp_sample,
+    "windspeed",
+    "Bike rentals PDP: wind speed",
+    "Axis uses the original normalized dataset scale; PDP averaged over exactly 50 sampled observations",
+    "Wind speed (normalized dataset scale)",
+    "Predicted daily rentals"
+  ),
+  "bike_pdp_windspeed.png"
+)
+
+bike_temp_hum_heatmap <- ggplot(
+  bike_pdp_temp_hum_2d,
+  aes(temp, hum, fill = prediction)
+) +
+  geom_tile(
+    width = tile_step(bike_pdp_temp_hum_2d$temp) * 1.02,
+    height = tile_step(bike_pdp_temp_hum_2d$hum) * 1.02
+  ) +
+  geom_rug(
+    data = bike_pdp_sample,
+    aes(x = temp, y = hum),
+    inherit.aes = FALSE,
+    sides = "bl",
+    alpha = 0.35,
+    color = "#705d48"
+  ) +
+  scale_fill_gradientn(
+    colours = c("#2d2233", "#374b83", "#5f87d9", "#7fb0ff"),
+    labels = label_comma(),
+    name = "Predicted\nrentals"
+  ) +
+  scale_x_continuous(labels = label_number(accuracy = 0.01)) +
+  scale_y_continuous(labels = label_number(accuracy = 0.01)) +
+  coord_cartesian(expand = FALSE) +
+  labs(
+    title = "Bike rentals PDP: temperature and humidity",
+    subtitle = "Both axes use normalized dataset scales; marginal rugs show the exact 50 PDP observations",
+    x = "Temperature (normalized dataset scale)",
+    y = "Humidity (normalized dataset scale)"
+  ) +
+  theme_pdp_heatmap()
+
+save_pdp_plot(
+  bike_temp_hum_heatmap,
+  "bike_pdp_2d_temperature_humidity_heatmap.png",
+  width = 9,
+  height = 6.5
+)
+
+house_pdp_subtitle <- "Random forest trained and explained on the same 1,500-row sample"
+
+save_pdp_plot(
+  plot_pdp_1d(
+    house_pdp_1d,
+    house_train,
+    "bedrooms",
+    "House price PDP: bedrooms",
+    house_pdp_subtitle,
+    "Bedrooms",
+    "Predicted price"
+  ),
+  "house_pdp_bedrooms.png"
+)
+
+save_pdp_plot(
+  plot_pdp_1d(
+    house_pdp_1d,
+    house_train,
+    "bathrooms",
+    "House price PDP: bathrooms",
+    house_pdp_subtitle,
+    "Bathrooms",
+    "Predicted price"
+  ),
+  "house_pdp_bathrooms.png"
+)
+
+save_pdp_plot(
+  plot_pdp_1d(
+    house_pdp_1d,
+    house_train,
+    "sqft_living",
+    "House price PDP: living area",
+    house_pdp_subtitle,
+    "Living area (sqft)",
+    "Predicted price"
+  ),
+  "house_pdp_sqft_living.png"
+)
+
+save_pdp_plot(
+  plot_pdp_1d(
+    house_pdp_1d,
+    house_train,
+    "floors",
+    "House price PDP: floors",
+    house_pdp_subtitle,
+    "Floors",
+    "Predicted price"
+  ),
+  "house_pdp_floors.png"
+)
